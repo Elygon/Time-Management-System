@@ -29,8 +29,7 @@ app.use('/auth', auth)
 import task from './routes/task'
 app.use('/task', task)
 
-connectDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`)
-    })
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`)
+    connectDB()
 })
