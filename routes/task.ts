@@ -178,9 +178,6 @@ router.post('/delete', auth, async (req: any, res: Response) => {
             return res.status(404).json({ status: 'error', msg: 'Task not found' })
         }
 
-        task.deletedAt = new Date()
-        await task.save()
-
         return res.status(200).json({ status: 'ok', msg: 'success' })
     } catch (err) {
         console.error('Delete task error:', err)
