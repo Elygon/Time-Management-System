@@ -10,7 +10,7 @@ import RefreshSession from '../models/refreshSession'
 
 
 // REGISTER
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/sign-up', async (req: Request, res: Response) => {
     const { name, email, password } = req.body
 
     //Validate required fields
@@ -34,20 +34,26 @@ router.post('/register', async (req: Request, res: Response) => {
             email,
             password: hashedPassword
         })
+        
 
         // Generate a verification token (JWT)
-        const vToken = jwt.sign(
-            { _id: user._id },
-            process.env.JWT_SECRET as string,
-            { expiresIn: '30m' }
-        )
+        // const vToken = jwt.sign(
+        //     { _id: user._id },
+        //     process.env.JWT_SECRET as string,
+        //     { expiresIn: '30m' }
+        // )
 
-        const vLink = `${process.env.BASE_URL || 'http://localhost:2900'}/auth/verify-email/${vToken}`
+        // const vLink = `${process.env.BASE_URL || 'http://localhost:2900'}/auth/verify-email/${vToken}`
 
         // Send verification email
         //await sendVerifyEmail(user.email, user.name, vLink)
 
-        return res.status(201).json({ status: 'success', msg: 'success', data: User })
+        return res.status(201).json({ status: 'ok', msg: 'success', data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            created: user.createdAt
+        }})
     } catch (error) {
         console.error('Error during registration:', error)
         return res.status(500).json({ status: 'error', msg: 'Internal server error' })
@@ -114,9 +120,9 @@ router.post('/login', async (req: Request, res: Response) => {
         }
 
         // Check if account is verified & active
-        if (!user.isVerified) {
-            return res.status(403).json({ status: 'error', msg: 'Please verify your email before logging in' })
-        }
+        // if (!user.isVerified) {
+        //     return res.status(403).json({ status: 'error', msg: 'Please verify your email before logging in' })
+        // }
 
         if (!user.isActive) {
             return res.status(403).json({ status: 'error', msg: 'Account is deactivated' })
@@ -146,12 +152,15 @@ router.post('/login', async (req: Request, res: Response) => {
             ipAddress: req.ip || req.socket.remoteAddress || 'unknown'
         })
 
-        // Return response (excluding password)
-        const userObj = user.toObject()
-        delete (userObj as any).password
 
         return res.status(200).json({ 
-            status: 'ok', msg: 'success', data: { user: userObj, accessToken, refreshToken }
+            status: 'ok', msg: 'success', data: { 
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                createdAt: user.createdAt
+            },
+            accessToken, refreshToken
         })
     } catch (error) {
         console.error('Login error:', error)
@@ -463,6 +472,7 @@ router.post('/reset-password/:token', async (req: Request, res: Response) => {
         // Hash and save new password
         const hashedPassword = await bcrypt.hash(newPassword, 10)
         user.password = hashedPassword
+        await user.save()
 
         // Invalidate all active sessions for security
         await RefreshSession.updateMany(

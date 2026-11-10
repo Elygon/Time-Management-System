@@ -13,7 +13,7 @@ interface ITask {
     completedAt: Date,
     reminderEnabled: boolean,
     reminderAt: Date,
-    category: string,
+    category: 'personal' | 'study' | 'work',
     position: number,
     createdAt: Date,
     updatedAt: Date,
@@ -35,7 +35,7 @@ const taskSchema = new Schema<ITask>({
     completedAt: Date, // When the task was completed
     reminderEnabled: { type: Boolean, default: false }, // when the task reminder is active
     reminderAt: Date, // Schedule reminder time
-    category: { type: String, trim: true, maxlength: 100 }, // Task Category
+    category: { type: String, enum: ['personal', 'study', 'work'] },
     position: { type: Number, default: 0 }, //manual ordering
     deletedAt: Date
 }, { timestamps: true, collection: 'tasks' })

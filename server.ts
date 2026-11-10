@@ -22,6 +22,13 @@ const connectDB = async () => {
 
 app.use(express.json())
 
+//Import route files
+import auth from './routes/auth'
+app.use('/auth', auth)
+
+import task from './routes/task'
+app.use('/task', task)
+
 connectDB().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`)
