@@ -133,7 +133,7 @@ router.post('/all', auth, async (req: any, res: Response) => {
             deletedAt: { $exists: false }
         }).sort({ createdAt: -1 })
 
-        return res.status(200).json({ status: 'ok', msg: 'success', data: tasks })
+        return res.status(200).json({ status: 'ok', msg: 'success', count: tasks.length, data: tasks })
     } catch (err) {
         console.error('View all tasks error:', err)
         return res.status(500).json({ status: 'error', msg: 'Internal server error'})
