@@ -125,6 +125,63 @@ router.post('/update', auth, async (req: any, res: Response) => {
 })
 
 
+// Get Reminders (Dynamic Overdue / Upcoming calculation)
+router.post('/reminders', auth, async (req: any, res: Response) => {
+    try {
+        const now = new Date()
+
+        // 1. Fetch active tasks with reminder enabled (exclude completed & cancelled)
+        const tasks = await Task.find({
+            userId: req.user._id,
+            deletedAt: { $exists: false },
+            reminderEnabled: true,
+            status: { $nin: ['completed', 'cancelled'] }
+        }).sort({ dueAt: 1 }) // Earliest due dates first (puts overdue at the top)
+
+        // 2. Map and compute dynamic badge and reminder time difference
+        const reminders = tasks.map((task) => {
+            const isOverdue = task.dueAt && new Date(task.dueAt) < now
+
+            // Calculate reminder offset in minutes (e.g., 30 for "30 min before")
+            let reminderMinutesBefore = 0
+            if (task.startAt && task.reminderAt) {
+                const diffMs = new Date(task.startAt).getTime() - new Date(task.reminderAt).getTime()
+                reminderMinutesBefore = Math.max(0, Math.round(diffMs / (60 * 1000)))
+            }
+
+            return {
+                _id: task._id,
+                title: task.title,
+                category: task.category,
+                priority: task.priority,
+                status: task.status, // 'pending' | 'in_progress'
+                startAt: task.startAt,
+                dueAt: task.dueAt,
+                reminderAt: task.reminderAt,
+                reminderMinutesBefore, // e.g. 30 -> "30 min before"
+                badge: isOverdue ? 'Overdue' : 'Upcoming' // dynamically computed!
+            }
+        })
+
+        const overdueCount = reminders.filter(r => r.badge === 'Overdue').length
+        const upcomingCount = reminders.filter(r => r.badge === 'Upcoming').length
+
+        return res.status(200).json({
+            status: 'ok',
+            msg: 'success',
+            count: reminders.length,
+            overdueCount,
+            upcomingCount,
+            data: reminders
+        })
+
+    } catch (err) {
+        console.error('Reminders error:', err)
+        return res.status(500).json({ status: 'error', msg: 'Internal server error' })
+    }
+})
+
+
 // View All Tasks (By the logged-in user)
 router.post('/all', auth, async (req: any, res: Response) => {
     try {
