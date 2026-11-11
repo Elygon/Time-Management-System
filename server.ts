@@ -29,6 +29,9 @@ app.use('/auth', auth)
 import task from './routes/task'
 app.use('/task', task)
 
+import timeLog from './routes/timeLog'
+app.use('/timeLog', timeLog)
+
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
     connectDB()
