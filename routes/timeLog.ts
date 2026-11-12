@@ -62,4 +62,123 @@ router.post('/today', auth, async (req: any, res: Response) => {
     }
 })
 
+
+// START TIMER
+router.post('/start', auth, async (req: any, res: Response) => {
+    const { taskId, note } = req.body
+
+    try {
+        // 1. Check if user already has an active running timer
+        const activeTimer = await TimeLog.findOne({
+            userId: req.user._id,
+            status: 'running'
+        })
+
+        if (activeTimer) {
+            return res.status(400).json({
+                status: 'error',
+                msg: 'You already have a running timer. Please stop it first.',
+                data: activeTimer
+            })
+        }
+
+        // 2. Optionally verify taskId belongs to user if provided
+        if (taskId) {
+            const task = await Task.findOne({ _id: taskId, userId: req.user._id })
+            if (!task) {
+                return res.status(404).json({ status: 'error', msg: 'Task not found' })
+            }
+            // If task was pending, mark it in_progress
+            if (task.status === 'pending') {
+                task.status = 'in_progress'
+                await task.save()
+            }
+        }
+
+        // 3. Create the running time log
+        const timeLog = await TimeLog.create({
+            userId: req.user._id,
+            taskId: taskId || null,
+            startAt: new Date(),
+            status: 'running',
+            note: note || ''
+        })
+
+        return res.status(201).json({ status: 'ok', msg: 'success', data: timeLog })
+
+    } catch (err) {
+        console.error('Start timer error:', err)
+        return res.status(500).json({ status: 'error', msg: 'Internal server error' })
+    }
+})
+
+
+// STOP TIMER
+router.post('/stop', auth, async (req: any, res: Response) => {
+    const { timeLogId, note } = req.body
+
+    try {
+        // 1. Find the running timer (either by timeLogId or the user's current running timer)
+        const filter: any = { userId: req.user._id, status: 'running' }
+        if (timeLogId) filter._id = timeLogId
+
+        const runningTimer = await TimeLog.findOne(filter)
+        if (!runningTimer) {
+            return res.status(404).json({
+                status: 'error',
+                msg: 'No running timer found'
+            })
+        }
+
+        // 2. Calculate endAt and duration in minutes
+        const endAt = new Date()
+        const diffMs = endAt.getTime() - new Date(runningTimer.startAt).getTime()
+        const durationMinutes = Math.max(1, Math.round(diffMs / (60 * 1000))) // minimum 1 minute
+
+        // 3. Update the record to completed
+        runningTimer.endAt = endAt
+        runningTimer.duration = durationMinutes
+        runningTimer.status = 'completed'
+        if (note) runningTimer.note = note
+
+        await runningTimer.save()
+
+        return res.status(200).json({
+            status: 'ok',
+            msg: 'success',
+            data: {
+                _id: runningTimer._id,
+                taskId: runningTimer.taskId,
+                startAt: runningTimer.startAt,
+                endAt: runningTimer.endAt,
+                durationMinutes,
+                formatted: `${Math.floor(durationMinutes / 60)} h ${durationMinutes % 60} min`
+            }
+        })
+
+    } catch (err) {
+        console.error('Stop timer error:', err)
+        return res.status(500).json({ status: 'error', msg: 'Internal server error' })
+    }
+})
+
+
+// GET CURRENT RUNNING TIMER
+router.post('/current', auth, async (req: any, res: Response) => {
+    try {
+        const currentTimer = await TimeLog.findOne({
+            userId: req.user._id,
+            status: 'running'
+        }).populate('taskId', 'title category priority')
+
+        return res.status(200).json({
+            status: 'ok',
+            msg: 'success',
+            data: currentTimer // returns null if no timer is running
+        })
+    } catch (err) {
+        return res.status(500).json({ status: 'error', msg: 'Internal server error' })
+    }
+})
+
 export default router
