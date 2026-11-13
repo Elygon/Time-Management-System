@@ -1,6 +1,6 @@
 import { Schema, model, Types } from 'mongoose'
 
-// Timelog inerface
+// Timelog interface
 interface ITimeLog {
     userId: Types.ObjectId,
     taskId: Types.ObjectId,

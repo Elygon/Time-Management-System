@@ -3,6 +3,7 @@ import { Schema, model, Types } from 'mongoose'
 // Task interface
 interface ITask {
     userId: Types.ObjectId,
+    projectId: Types.ObjectId,
     title: string,
     description: string,
     status: 'pending' | 'in_progress' | 'completed' | 'cancelled',
@@ -23,6 +24,7 @@ interface ITask {
 // Task schema
 const taskSchema = new Schema<ITask>({
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
     title: String,
     description: String,
     status: { 
